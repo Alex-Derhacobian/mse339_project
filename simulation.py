@@ -127,6 +127,9 @@ for i in range(len(S)):
         liquidity = (reserves_risky_given_spotprice_b - reserves_risky_given_spotprice_a) / (np.log(S[i+1]) - np.log(S[i]))
 
         liquidity_value_array.append(liquidity)
+        print("{} {}".format(reserves_risky_given_spotprice_b,reserves_risky_given_spotprice_a))
+        print(Pool.reserves_risky)
+        print("{} {}".format(S[i], S[i+1]))
 
 
 # plt.plot(fees, mse, 'o')
