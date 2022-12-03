@@ -86,8 +86,11 @@ max_marginal_price_array = []
 theoretical_lp_value_array = []
 # Effective value of LP shares with fees
 effective_lp_value_array = []
-# New liquidity definition valies
-liquidity_value_array = []
+# New liquidity definition values for risky asset
+risky_liquidity_value_array = []
+# New liquidity definition values for riskless asset
+riskless_liquidity_value_array = []
+
 
 dtau = TAU_UPDATE_FREQUENCY
 
@@ -123,13 +126,14 @@ for i in range(len(S)):
     if i < len(S) - 1:
         reserves_risky_given_spotprice_a = Pool.getRiskyReservesGivenSpotPrice(S[i])
         reserves_risky_given_spotprice_b = Pool.getRiskyReservesGivenSpotPrice(S[i+1])
+        risky_liquidity = (reserves_risky_given_spotprice_b - reserves_risky_given_spotprice_a) / (np.log(S[i+1]) - np.log(S[i]))
+        risky_liquidity_value_array.append(risky_liquidity)
 
-        liquidity = (reserves_risky_given_spotprice_b - reserves_risky_given_spotprice_a) / (np.log(S[i+1]) - np.log(S[i]))
 
-        liquidity_value_array.append(liquidity)
-        print("{} {}".format(reserves_risky_given_spotprice_b,reserves_risky_given_spotprice_a))
-        print(Pool.reserves_risky)
-        print("{} {}".format(S[i], S[i+1]))
+        reserves_riskless_given_spotprice_a = Pool.getRisklessReservesGivenSpotPrice(S[i])
+        reserves_riskless_given_spotprice_b = Pool.getRisklessReservesGivenSpotPrice(S[i+1])
+        riskless_liquidity = (reserves_riskless_given_spotprice_b - reserves_riskless_given_spotprice_a) / (np.log(S[i+1]) - np.log(S[i]))
+        riskless_liquidity_value_array.append(riskless_liquidity)
 
 
 # plt.plot(fees, mse, 'o')
@@ -164,7 +168,8 @@ if PLOT_PAYOFF_EVOL:
     plt.figure()
     plt.plot(t[0:max_index], theoretical_lp_value_array[0:max_index], label = "Theoretical LP value")
     plt.plot(t[0:max_index], effective_lp_value_array[0:max_index], label = "Effective LP value")
-    plt.plot(t[0:max_index], liquidity_value_array[0:max_index], label = "New Liquidity value")
+    plt.plot(t[0:max_index], risky_liquidity_value_array[0:max_index], label = "New Risky Liquidity value")
+    plt.plot(t[0:max_index], riskless_liquidity_value_array[0:max_index], label = "New Riskless Liquidity value")
     plt.title("Value of LP shares\n" + r"$\sigma = {vol}$, $K = {strike}$, $\gamma = {gam}$, $\tau_0 = {tau}$, $d\tau = {dt}$".format(vol=ANNUALIZED_VOL, strike=STRIKE_PRICE, gam=round(1-FEE, 3), dt=round(24*TIME_STEPS_SIZE*365), tau = TIME_TO_MATURITY)+" hours"+ ", np.seed("+str(SEED)+")")
     plt.xlabel("Time steps (years)")
     plt.ylabel("Value (USD)")
