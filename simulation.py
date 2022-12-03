@@ -118,6 +118,12 @@ for i in range(len(S)):
         break
     max_index = i
 
+    reserves_risky_given_spotprice_a = Pool.getRiskyReservesGivenSpotPrice(S[i])
+    reserves_risky_given_spotprice_b = Pool.getRiskyReservesGivenSpotPrice(S[i+1])
+
+    liquidity = (reserves_risky_given_spotprice_b - reserves_risky_given_spotprice_a) / (np.log(S[i+1]) - np.log(S[i]))
+
+
 # plt.plot(fees, mse, 'o')
 # plt.xlabel("Fee")
 # plt.ylabel("MSE")

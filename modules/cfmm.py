@@ -60,6 +60,8 @@ class CoveredCallAMM(object):
     def getRiskyGivenRiskless(self, riskless):
         return 1 - norm.cdf(norm.ppf((riskless - self.invariant) / self.K) + self.sigma * np.sqrt(self.tau))
 
+
+
     def swapAmountInRisky(self, amount_in):
         """
         Swap in some amount of the risky asset and get some amount of the riskless asset in return.
