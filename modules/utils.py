@@ -16,80 +16,38 @@ def nonnegative(x):
     return x >= 0
 
 
-def blackScholesCoveredCall(x, K, sigma, tau):
+
+def getXGivenSpotPrice(S, K, sigma, tau):
     """
-    Return value of the BS covered call trading function for given reserves and parameters.
+    WRITE THIS - we want to be able to get the reserves given some arbitrary spot price
+    PUT IN THE CFMM FUNCTION
     """
-    result = x[1] - K * norm.cdf(norm.ppf(1 - x[0]) - sigma * np.sqrt(tau))
-    return result
+
+    pass 
 
 
-def quantilePrime(x):
+
+
+def getSellTrade(avg_size, variance, prob_X):
     """
-    Analytical formula for the derivative of the quantile function (inverse of
-    the CDF).
-    """
-    EPSILON = 1e-16
-    if (x > 1 - EPSILON) or (x < 0 + EPSILON):
-        return inf
+    Generate a SELL trade of either X or Y with size drawn from a normal distribution
+
+    Params:
+
+    avg_size: Mean of the normal distriution 
+    var: Variance of the normal distribution
+    prob_X: probability trade is a SELL X
+
+    """    
+
+    trade_size = (int)np.random.normal(avg_size,variance)
+
+    if np.random.rand() < prob_X:
+        trade = 'SELL X'
     else:
-        return norm.pdf(norm.ppf(x)) ** -1
+        trade = 'SELL Y'
 
-
-def blackScholesCoveredCallSpotPrice(x, K, sigma, tau):
-    """
-    Analytical formula for the spot price (reported price) of the BS covered
-    call CFMM in the zero fees case.
-    """
-    return K * norm.pdf(norm.ppf(1 - x) - sigma * np.sqrt(tau)) * quantilePrime(1 - x)
-
-
-# Functions for analytic zero fees spot price and reserves calculations
-def getRiskyReservesGivenSpotPrice(S, K, sigma, tau):
-    """
-    Given some spot price S, get the risky reserves corresponding to that spot price by solving
-    S = -y' = -f'(x) for x. Only useful in the no-fee case.
-    """
-
-    def func(x):
-        return S - blackScholesCoveredCallSpotPrice(x, K, sigma, tau)
-
-    if S > K:
-        sol, r = newton(func, 0.01, maxiter=100, disp=False, full_output=True)
-    else:
-        sol, r = newton(func, 0.5, maxiter=100, disp=False, full_output=True)
-    reserves_risky = r.root
-    # The reserves almost don't change anymore at the boundaries, so if we haven't
-    # converged, we return what we logically know to be very close to the actual 
-    # reserves.
-    if math.isnan(reserves_risky) and S > K:
-        return 0
-    elif math.isnan(reserves_risky) and S < K:
-        return 1
-    return reserves_risky
-
-
-def getRiskyGivenSpotPriceWithDelta(S, K, sigma, tau):
-    """
-    Given some spot price S, get the risky reserves corresponding to that spot price using results
-    from options theory, thereby avoiding the use of an iterative solver.
-    """
-    if tau <= 0:
-        if S > K:
-            return 0
-        if S < K:
-            return 1
-    else:
-        d1 = (np.log(S / K) + (tau * (sigma ** 2) / 2)) / (sigma * np.sqrt(tau))
-        return 1 - norm.cdf(d1)
-
-
-def getRisklessGivenRisky(risky, K, sigma, tau):
-    if risky == 0:
-        return K
-    elif risky == 1:
-        return 0
-    return K * norm.cdf(norm.ppf(1 - risky) - sigma * np.sqrt(tau))
+    return (trade, trade_size)
 
 
 def generateGBM(T, mu, sigma, S0, dt):

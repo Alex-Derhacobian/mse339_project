@@ -10,18 +10,25 @@ import numpy as np
 import copy
 
 from modules import cfmm
-from modules.arb import arbitrageExactly
-from modules.utils import getRiskyGivenSpotPriceWithDelta, getRisklessGivenRisky, generateGBM
+from modules.utils import getSellTrade, generateGBM
 
-EPSILON = 1e-8
+
 
 #Import config 
 config_object = ConfigParser()
 config_object.read("config.ini")
 
-STRIKE_PRICE = float(config_object.get("Pool parameters", "STRIKE_PRICE"))
-TIME_TO_MATURITY = float(config_object.get("Pool parameters", "TIME_TO_MATURITY"))
+
+###### TO DO: Set reasonable parameters
+
 FEE = float(config_object.get("Pool parameters", "FEE"))
+EPSILON = float(config_object.get("Pool parameters", "EPSILON"))
+K = float(config_object.get("Pool parameters", "K"))
+
+
+TRADE_SIZE_AVERAGE = float(config_object.get("Trade parameters", "TRADE_SIZE_AVERAGE"))
+TRADE_SIZE_VARIANCE  = float(config_object.get("Trade parameters", "TRADE_SIZE_VARIANCE"))
+PROBABILITY_OF_TRADE_X = float(config_object.get("Trade parameters", "PROBABILITY_OF_TRADE_X"))
 
 INITIAL_REFERENCE_PRICE = float(config_object.get("Price action parameters", "INITIAL_REFERENCE_PRICE"))
 ANNUALIZED_VOL = float(config_object.get("Price action parameters", "ANNUALIZED_VOL"))
@@ -29,39 +36,33 @@ DRIFT = float(config_object.get("Price action parameters", "DRIFT"))
 TIME_HORIZON = float(config_object.get("Price action parameters", "TIME_HORIZON"))
 TIME_STEPS_SIZE = float(config_object.get("Price action parameters", "TIME_STEPS_SIZE"))
 
-TAU_UPDATE_FREQUENCY = float(config_object.get("Simulation parameters", "TAU_UPDATE_FREQUENCY"))
-SIMULATION_CUTOFF = float(config_object.get("Simulation parameters", "SIMULATION_CUTOFF"))
 SEED = int(config_object.get("Simulation parameters", "SEED"))
-
 IS_CONSTANT_PRICE = config_object.getboolean("Simulation parameters", "IS_CONSTANT_PRICE")
 PLOT_PRICE_EVOL = config_object.getboolean("Simulation parameters", "PLOT_PRICE_EVOL")
-PLOT_PAYOFF_EVOL = config_object.getboolean("Simulation parameters", "PLOT_PAYOFF_EVOL")
-PLOT_PAYOFF_DRIFT = config_object.getboolean("Simulation parameters", "PLOT_PAYOFF_DRIFT")
 SAVE_PRICE_EVOL = config_object.getboolean("Simulation parameters", "SAVE_PRICE_EVOL")
-SAVE_PAYOFF_EVOL = config_object.getboolean("Simulation parameters", "SAVE_PAYOFF_EVOL")
-SAVE_PAYOFF_DRIFT = config_object.getboolean("Simulation parameters", "SAVE_PAYOFF_DRIFT")
+PLOT_RESERVES = config_object.getboolean("Simulation parameters", "PLOT_RESERVES")
+SAVE_RESERVS = config_object.getboolean("Simulation parameters", "SAVE_RESERVES")
+PLOT_LIQUID = config_object.getboolean("Simulation parameters", "PLOT_LIQUID")
+SAVE_LIQUID = config_object.getboolean("Simulation parameters", "SAVE_LIQUID")
+
 
 #Initialize pool parameters
-sigma = ANNUALIZED_VOL
-initial_tau = TIME_TO_MATURITY
-K = STRIKE_PRICE
-fee = FEE
-gamma = 1 - FEE
 np.random.seed(SEED)
 
-#Stringify for plotting
-gamma_str = str(1 - fee)
-sigma_str = str(sigma)
-K_str = str(K)
 
-#Initialize pool and arbitrager objects
-Pool = cfmm.CoveredCallAMM(0.5, K, sigma, initial_tau, fee)
+#Initialize pool object
+Pool = cfmm.ConstantFunction(K, FEE)
+
+
+
+###### TO DO: Update this with different distributions
+
+# Generate background reference price
 
 #Initialize GBM parameters
 T = TIME_HORIZON
 dt = TIME_STEPS_SIZE
 S0 = INITIAL_REFERENCE_PRICE
-
 
 t, S = generateGBM(T, DRIFT, ANNUALIZED_VOL, S0, dt)
 
@@ -75,128 +76,114 @@ if IS_CONSTANT_PRICE:
 plt.plot(t, S)
 plt.show()
 
+
+
 # Prepare storage variables
 
-# Store spot prices after each step - price of X in terms of Y
-spot_price_array = []
+# Spot price of one asset in terms of the other
+X_spot_price_array = []
+Y_spot_price_array = []
 
 
-# Marginal price affter each step
-min_marginal_price_array = []
-max_marginal_price_array = []
+trade_success_array = []
+X_reserves_array = []
+Y_reserves_array = []
 
-# Array to store the theoretical value of LP shares in the case of a pool with zero fees
-theoretical_lp_value_array = []
-# Effective value of LP shares with fees
-effective_lp_value_array = []
-
-
+liquidity_array = []
+inefficiency_array = []
 
 
 
+##### TO CHECK: SHOULD WE KEEP REF PRICE CONSTANT?
+
+##### TO CHECK: HOW MUCH OF THIS NEEDS TO BE CHANGED WHEN NOT CONSTANT FUNCTION? OR WHEN WE ADD FEES?
 
 for i in range(len(S)):
 
 
-    # Generate a trade of size K from distribution
+    # Generate a trade from distribution
+    (trade, trade_size) = getSellTrade(TRADE_SIZE_AVERAGE,TRADE_SIZE_VARIANCE,PROBABILITY_OF_TRADE_X)
 
-    # Try to make the trade
+
+    # Attempt to make the trade
+    if trade == 'SELL X'
+        trade_success = Pool.swapXforY(size_trade_X, S[i], EPSILON)
+    elif trade == 'SELL Y':
+        size_trade_X = 0
+        trade_success = Pool.swapYforX(size_trade_X, 1/S[i], EPSILON)
+
+    trade_success.append(trade_success)
+
 
     # Add values to array
+    X_spot_price_array.append(Pool.getXofY())
+    Y_spot_price_array.append(Pool.getYofX())
+    X_reserves_array.append(Pool.getXreserves())
+    Y_reserves_array.append(Pool.getYreserves())
 
 
-    #Update pool's time to maturity
+    ##### TO CHECK - should we make this more an instantaneous derivative? 
+    ####### TO CHECK - how does this relate to the other def of liqudity?
+    liquidity = (Y_reserves_array[i] - Y_reserves_array[i-1])/(Y_spot_price_array[i] - Y_spot_price_array[i-1])
+    liquidity_array.append(liquidity)
+    inefficiency = Pool.getYreserves/liquidity
+    inefficiency_array.append(inefficiency)
 
 
-    spot_price_array.append(Pool.getX)
-
-    
-    if i % dtau == 0:
-        Pool.tau = initial_tau - t[i]
-        #Changing tau changes the value of the invariant even if no trade happens
-        Pool.invariant = Pool.reserves_riskless - Pool.getRisklessGivenRiskyNoInvariant(Pool.reserves_risky)
-        spot_price_array.append(Pool.getSpotPrice())
-        # _, max_marginal_price = Pool.virtualSwapAmountInRiskless(EPSILON)
-        # _, min_marginal_price = Pool.virtualSwapAmountInRisky(EPSILON)
-
-    if Pool.tau >= 0:
-        #Perform arbitrage step
-        arbitrageExactly(S[i], Pool)
-        max_marginal_price_array.append(Pool.getMarginalPriceSwapRisklessIn(0))
-        min_marginal_price_array.append(Pool.getMarginalPriceSwapRiskyIn(0))
-        #Get reserves given the reference price in the zero fees case
-        theoretical_reserves_risky = getRiskyGivenSpotPriceWithDelta(S[i], Pool.K, Pool.sigma, theoretical_tau)
-        theoretical_reserves_riskless = getRisklessGivenRisky(theoretical_reserves_risky, Pool.K, Pool.sigma, theoretical_tau)
-        theoretical_lp_value = theoretical_reserves_risky*S[i] + theoretical_reserves_riskless
-        theoretical_lp_value_array.append(theoretical_lp_value)
-        effective_lp_value_array.append(Pool.reserves_risky*S[i] + Pool.reserves_riskless)
-    if Pool.tau < 0: 
-        max_index = i
-        break
     max_index = i
 
 
 
 
-# plt.plot(fees, mse, 'o')
-# plt.xlabel("Fee")
-# plt.ylabel("MSE")
-# plt.title("Mean square error with theoretical payoff as a function of the fee parameter\n" + r"$\sigma = 0.5$, $K = 1100$, $\gamma = 1$, $\mathrm{d}\tau = 30 \ \mathrm{days}$")
-# plt.show()
+# Show Data:
 
-theoretical_lp_value_array = np.array(theoretical_lp_value_array)
-effective_lp_value_array = np.array(effective_lp_value_array)
 
-#Mean square error
-mse = np.square(np.subtract(theoretical_lp_value_array, effective_lp_value_array)/theoretical_lp_value_array).mean()
+######### TO DO - look at trade success evolution time
+print("Trade success: {}%".format(sum(trade_success_array)/max_index))
+
 
 if PLOT_PRICE_EVOL: 
     plt.plot(t[0:max_index], S[0:max_index], label = "Reference price")
-    # plt.plot(t[0:max_index], spot_price_array, label = "Pool spot price")
-    plt.plot(t[0:max_index], min_marginal_price_array[0:max_index], label = "Price sell risky")
-    plt.plot(t[0:max_index], max_marginal_price_array[0:max_index], label = "Price buy risky")
-    plt.title("Arbitrage between CFMM and reference price\n" + r"$\sigma = {vol}$, $K = {strike}$, $\gamma = {gam}$, $\tau_0 = {tau}$, $d\tau = {dt}$".format(vol=ANNUALIZED_VOL, strike=STRIKE_PRICE, gam=round(1-FEE, 3), dt=round(24*TIME_STEPS_SIZE*365), tau = TIME_TO_MATURITY)+" hours"+ ", np.seed("+str(SEED)+")")
+    plt.plot(t[0:max_index], X_spot_price_array[0:max_index], label = "Spot Price")
+    plt.title("Reference price vs Spot Price of X")
     plt.xlabel("Time steps (years)")
     plt.ylabel("Price (USD)")
     plt.legend(loc='best')
-    params_string = "sigma"+str(ANNUALIZED_VOL)+"_K"+str(STRIKE_PRICE)+"_gamma"+str(gamma)+"_dtau"+str(TIME_STEPS_SIZE)+"_seed"+str(SEED)
+    params_string = 'params_tbd'
     filename = 'price_evol_'+params_string+'.svg'
     plt.plot()
     if SAVE_PRICE_EVOL:
         plt.savefig('sim_results/'+filename)
     plt.show(block = False)
 
-if PLOT_PAYOFF_EVOL:
-    plt.figure()
-    plt.plot(t[0:max_index], theoretical_lp_value_array[0:max_index], label = "Theoretical LP value")
-    plt.plot(t[0:max_index], effective_lp_value_array[0:max_index], label = "Effective LP value")
-    plt.plot(t[0:max_index], risky_liquidity_value_array[0:max_index], label = "New Risky Liquidity value")
-    plt.plot(t[0:max_index], riskless_liquidity_value_array[0:max_index], label = "New Riskless Liquidity value")
-    plt.title("Value of LP shares\n" + r"$\sigma = {vol}$, $K = {strike}$, $\gamma = {gam}$, $\tau_0 = {tau}$, $d\tau = {dt}$".format(vol=ANNUALIZED_VOL, strike=STRIKE_PRICE, gam=round(1-FEE, 3), dt=round(24*TIME_STEPS_SIZE*365), tau = TIME_TO_MATURITY)+" hours"+ ", np.seed("+str(SEED)+")")
+
+if PLOT_RESERVES: 
+    plt.plot(t[0:max_index], X_reserves_array[0:max_index], label = "X Reserves")
+    plt.plot(t[0:max_index], Y_reserves_array[0:max_index], label = "Y Reserves")
+    plt.title("Reserves over Time")
     plt.xlabel("Time steps (years)")
-    plt.ylabel("Value (USD)")
+    plt.ylabel("Price (USD)")
     plt.legend(loc='best')
-    params_string = "sigma"+str(ANNUALIZED_VOL)+"_K"+str(STRIKE_PRICE)+"_gamma"+str(gamma)+"_dtau"+str(TAU_UPDATE_FREQUENCY)+"_seed"+str(SEED)
-    filename = 'lp_value_'+params_string+'.svg'
+    params_string = 'params_tbd'
+    filename = 'reserves'+params_string+'.svg'
     plt.plot()
-    if SAVE_PAYOFF_EVOL:
+    if SAVE_RESERVES:
         plt.savefig('sim_results/'+filename)
-    plt.show(block = True)
+    plt.show(block = False)
 
 
-if PLOT_PAYOFF_DRIFT:
-    plt.figure()
-    plt.plot(t[0:max_index], 100*abs(theoretical_lp_value_array[max_index]-effective_lp_value_array[max_index])/theoretical_lp_value_array, label=f"Seed = {SEED}")
-    plt.title("Drift of LP shares value vs. theoretical \n" + r"$\sigma = {vol}$, $K = {strike}$, $\gamma = {gam}$, $\tau_0 = {tau}$, $d\tau = {dt}$".format(vol=ANNUALIZED_VOL, strike=STRIKE_PRICE, gam=1-FEE, dt=TIME_STEPS_SIZE, tau = TIME_TO_MATURITY)+" days"+ ", np.seed("+str(SEED)+")")
+if PLOT_LIQUID: 
+    plt.plot(t[0:max_index], liquidity[0:max_index], label = "Liquidity")
+    plt.plot(t[0:max_index], inefficiency[0:max_index], label = "Inefficiency")
+    plt.title("liquidity and inefficiency")
     plt.xlabel("Time steps (years)")
-    plt.ylabel("Drift (%)")
+    plt.ylabel("Values")
     plt.legend(loc='best')
-    params_string = "sigma"+str(ANNUALIZED_VOL)+"_K"+str(STRIKE_PRICE)+"_gamma"+str(gamma)+"_dtau"+str(TAU_UPDATE_FREQUENCY)+"_seed"+str(SEED)
-    filename = 'drift_seed_comparison'+params_string+'.svg'
+    params_string = 'params_tbd'
+    filename = 'liquidity'+params_string+'.svg'
     plt.plot()
-    if SAVE_PAYOFF_DRIFT:
+    if SAVE_LIQUID:
         plt.savefig('sim_results/'+filename)
-    plt.show()
+    plt.show(block = False)
 
-# print("MSE = ", mse)
-# print("final divergence = ", 100*abs(theoretical_lp_value_array[-1] - effective_lp_value_array[-1])/theoretical_lp_value_array[-1], "%")
+
