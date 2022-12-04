@@ -53,7 +53,7 @@ class ConstantProductCFMM(object):
     def getYGivenX(self, X):
         return self.K / X
 
-    def swapInAmountX(self, amount_in):
+    def swapInAmountX(self, amount_in, reference_price, epsilon):
         """
         Swap in some amount of the risky asset and get some amount of the riskless asset in return.
 
@@ -67,7 +67,10 @@ class ConstantProductCFMM(object):
         new_reserves_y = self.getYGivenX(self.reserves_x + gamma * amount_in)
         amount_out = self.reserves_y - new_reserves_y
 
-        if amount_out > self.max_slippage:
+        exchange_price = self.reserves_y / self.reserves_x 
+        slippage = exchange_price / reference_price
+
+        if slippage > (1 + epsilon):
             amount_out = 0
             effective_price_in_x = 0
             return amount_out, effective_price_in_x
@@ -79,7 +82,7 @@ class ConstantProductCFMM(object):
             effective_price_in_x = amount_out / amount_in
             return amount_out, effective_price_in_x
 
-    def swapInAmountY(self, amount_in):
+    def swapInAmountY(self, amount_in, reference_price, epsilon):
         """
         Swap in some amount of the riskless asset and get some amount of the risky asset in return.
 
@@ -93,7 +96,11 @@ class ConstantProductCFMM(object):
         gamma = 1 - self.fee
         new_reserves_x = self.getXGivenY(self.reserves_y + gamma * amount_in)
         amount_out = self.reserves_x - new_reserves_x
-        if amount_out > self.max_slippage:
+
+        exchange_price = self.reserves_y / self.reserves_x 
+        slippage = exchange_price / reference_price
+
+        if slippage > (1 + epsilon):
             amount_out = 0
             effective_price_in_y = 0
             return amount_out, effective_price_in_y
