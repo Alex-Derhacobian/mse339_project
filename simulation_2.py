@@ -77,8 +77,10 @@ plt.show()
 
 # Prepare storage variables
 
-# Store spot prices after each step
+# Store spot prices after each step - price of X in terms of Y
 spot_price_array = []
+
+
 # Marginal price affter each step
 min_marginal_price_array = []
 max_marginal_price_array = []
@@ -89,13 +91,25 @@ theoretical_lp_value_array = []
 effective_lp_value_array = []
 
 
-dtau = TAU_UPDATE_FREQUENCY
+
+
+
 
 for i in range(len(S)):
 
 
+    # Generate a trade of size K from distribution
+
+    # Try to make the trade
+
+    # Add values to array
+
+
     #Update pool's time to maturity
-    theoretical_tau = initial_tau - t[i]
+
+
+    spot_price_array.append(Pool.getX)
+
     
     if i % dtau == 0:
         Pool.tau = initial_tau - t[i]
