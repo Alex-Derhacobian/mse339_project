@@ -9,9 +9,8 @@ from scipy.stats import norm
 from scipy import optimize
 import numpy as np
 
-from modules.utils import nonnegative, quantilePrime, blackScholesCoveredCallSpotPrice
+from modules.utils import nonnegative
 
-EPSILON = 1e-8
 
 
 class ConstantProductCFMM(object):
@@ -35,7 +34,7 @@ class ConstantProductCFMM(object):
         the invariant of the CFMM
     """
 
-    def __init__(self, initial_x, max_slippage, k):
+    def __init__(self, initial_x, k):
         """
         Initialize the AMM pool with a starting risky asset reserve as an
         input, calculate the corresponding riskless asset reserve needed to
@@ -45,7 +44,6 @@ class ConstantProductCFMM(object):
         self.K = k
         self.reserves_y = k / initial_x
         self.fee = 0
-        self.max_slippage = max_slippage
 
     def getXGivenY(self, Y):
         return self.K / Y
@@ -65,9 +63,10 @@ class ConstantProductCFMM(object):
         assert nonnegative(amount_in)
         gamma = 1 - self.fee
         new_reserves_y = self.getYGivenX(self.reserves_x + gamma * amount_in)
+        new_reserves_x = self.getXGivenY(new_reserves_y)
         amount_out = self.reserves_y - new_reserves_y
 
-        exchange_price = self.reserves_y / self.reserves_x 
+        exchange_price = new_reserves_y / new_reserves_x
         slippage = exchange_price / reference_price
 
         if slippage > (1 + epsilon):
@@ -77,6 +76,7 @@ class ConstantProductCFMM(object):
         else:
             self.reserves_x += amount_in
             self.reserves_y -= amount_out
+            assert(abs(self.reserves_x * self.reserves_y - self.K)< 0.001)
             assert nonnegative(new_reserves_y)
             # Update invariant
             effective_price_in_x = amount_out / amount_in
@@ -95,9 +95,10 @@ class ConstantProductCFMM(object):
         assert nonnegative(amount_in)
         gamma = 1 - self.fee
         new_reserves_x = self.getXGivenY(self.reserves_y + gamma * amount_in)
+        new_reserves_y = self.getYGivenX(new_reserves_x)
         amount_out = self.reserves_x - new_reserves_x
 
-        exchange_price = self.reserves_y / self.reserves_x 
+        exchange_price = new_reserves_y / new_reserves_x
         slippage = exchange_price / reference_price
 
         if slippage > (1 + epsilon):
@@ -107,6 +108,7 @@ class ConstantProductCFMM(object):
         else:
             self.reserves_y += amount_in
             self.reserves_x -= amount_out
+            assert(abs(self.reserves_x * self.reserves_y -self.K) < 0.001)
             assert nonnegative(new_reserves_x)
             # Update invariant
             effective_price_in_y = None

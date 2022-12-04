@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import copy
 
-from modules import cfmm
+from modules import constant_product_cfmm as cfmm
 from modules.utils import getSellTrade, generateGBM
 
 
@@ -42,7 +42,7 @@ IS_CONSTANT_PRICE = config_object.getboolean("Simulation parameters", "IS_CONSTA
 PLOT_PRICE_EVOL = config_object.getboolean("Simulation parameters", "PLOT_PRICE_EVOL")
 SAVE_PRICE_EVOL = config_object.getboolean("Simulation parameters", "SAVE_PRICE_EVOL")
 PLOT_RESERVES = config_object.getboolean("Simulation parameters", "PLOT_RESERVES")
-SAVE_RESERVS = config_object.getboolean("Simulation parameters", "SAVE_RESERVES")
+SAVE_RESERVES = config_object.getboolean("Simulation parameters", "SAVE_RESERVES")
 PLOT_LIQUID = config_object.getboolean("Simulation parameters", "PLOT_LIQUID")
 SAVE_LIQUID = config_object.getboolean("Simulation parameters", "SAVE_LIQUID")
 
@@ -52,7 +52,7 @@ np.random.seed(SEED)
 
 
 #Initialize pool object
-Pool = cfmm.ConstantFunction(BUDGET, K, FEE)
+Pool = cfmm.ConstantProductCFMM(BUDGET, K)
 
 
 
@@ -73,9 +73,6 @@ if IS_CONSTANT_PRICE:
     for i in range(length):
         constant_price.append(S0)
     S = constant_price
-
-plt.plot(t, S)
-plt.show()
 
 
 
@@ -107,28 +104,30 @@ for i in range(len(S)):
 
 
     # Attempt to make the trade
-    if trade == 'SELL X'
-        trade_success = Pool.swapInAmountX(size_trade_X, S[i], EPSILON)
+    if trade == 'SELL X':
+        out, price = Pool.swapInAmountX(trade_size, S[i], EPSILON)
+        trade_success = True if out!=0 else False
     elif trade == 'SELL Y':
-        size_trade_X = 0
-        trade_success = Pool.swapInAmountY(size_trade_X, 1/S[i], EPSILON)
+        out, price  = Pool.swapInAmountY(trade_size, S[i], EPSILON)
+        trade_success = True if out!=0 else False
 
-    trade_success.append(trade_success)
+    trade_success_array.append(trade_success)
 
 
     # Add values to array
-    X_spot_price_array.append(Pool.getXGivenY())
-    Y_spot_price_array.append(Pool.getYGivenX())
-    X_reserves_array.append(Pool.reserves_X)
-    Y_reserves_array.append(Pool.reserves_Y)
+    X_spot_price_array.append(1/Pool.getSpotPrice())
+    Y_spot_price_array.append(Pool.getSpotPrice())
+    X_reserves_array.append(Pool.reserves_x)
+    Y_reserves_array.append(Pool.reserves_y)
 
 
     ##### TO CHECK - should we make this more an instantaneous derivative? 
     ####### TO CHECK - how does this relate to the other def of liqudity?
-    liquidity = (Y_reserves_array[i] - Y_reserves_array[i-1])/(Y_spot_price_array[i] - Y_spot_price_array[i-1])
-    liquidity_array.append(liquidity)
-    inefficiency = Pool.getYreserves/liquidity
-    inefficiency_array.append(inefficiency)
+    if trade_success and len(Y_spot_price_array) > 1:
+        liquidity = (Y_reserves_array[i] - Y_reserves_array[i-1])/(Y_spot_price_array[i] - Y_spot_price_array[i-1])
+        liquidity_array.append(liquidity)
+        inefficiency = Pool.reserves_y/liquidity
+        inefficiency_array.append(inefficiency)
 
 
     max_index = i
@@ -140,7 +139,7 @@ for i in range(len(S)):
 
 
 ######### TO DO - look at trade success evolution time
-print("Trade success: {}%".format(sum(trade_success_array)/max_index))
+print("Trade success: {}%".format(100*sum(trade_success_array)/len(S)))
 
 
 if PLOT_PRICE_EVOL: 
@@ -158,7 +157,9 @@ if PLOT_PRICE_EVOL:
     plt.show(block = False)
 
 
-if PLOT_RESERVES: 
+
+if PLOT_RESERVES:
+    plt.figure()
     plt.plot(t[0:max_index], X_reserves_array[0:max_index], label = "X Reserves")
     plt.plot(t[0:max_index], Y_reserves_array[0:max_index], label = "Y Reserves")
     plt.title("Reserves over Time")
@@ -170,12 +171,16 @@ if PLOT_RESERVES:
     plt.plot()
     if SAVE_RESERVES:
         plt.savefig('sim_results/'+filename)
-    plt.show(block = False)
+    plt.show(block = True)
 
 
 if PLOT_LIQUID: 
-    plt.plot(t[0:max_index], liquidity[0:max_index], label = "Liquidity")
-    plt.plot(t[0:max_index], inefficiency[0:max_index], label = "Inefficiency")
+    plt.figure()
+    t_mask = np.where(trade_success_array[1:max_index+1])
+    print(len(t_mask[0]))
+    print(len(liquidity_array))
+    plt.plot(t[t_mask], liquidity_array, label = "Liquidity")
+    plt.plot(t[t_mask], inefficiency_array, label = "Inefficiency")
     plt.title("liquidity and inefficiency")
     plt.xlabel("Time steps (years)")
     plt.ylabel("Values")
@@ -185,6 +190,6 @@ if PLOT_LIQUID:
     plt.plot()
     if SAVE_LIQUID:
         plt.savefig('sim_results/'+filename)
-    plt.show(block = False)
+    plt.show(block = True)
 
 

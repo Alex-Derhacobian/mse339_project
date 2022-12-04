@@ -40,7 +40,7 @@ def getSellTrade(avg_size, variance, prob_X):
 
     """    
 
-    trade_size = (int)np.random.normal(avg_size,variance)
+    trade_size = (int)(np.random.normal(avg_size,variance))
 
     if np.random.rand() < prob_X:
         trade = 'SELL X'
