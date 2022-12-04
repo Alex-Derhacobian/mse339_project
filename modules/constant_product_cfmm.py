@@ -66,8 +66,9 @@ class ConstantProductCFMM(object):
         new_reserves_x = self.getXGivenY(new_reserves_y)
         amount_out = self.reserves_y - new_reserves_y
 
-        exchange_price = new_reserves_y / new_reserves_x
-        slippage = exchange_price / reference_price
+        exchange_price = self.K * (1/new_reserves_x**2)
+        slippage = exchange_price / reference_price 
+        print("Buy Y Slippage {}".format(slippage))
 
         if slippage > (1 + epsilon):
             amount_out = 0
@@ -98,8 +99,9 @@ class ConstantProductCFMM(object):
         new_reserves_y = self.getYGivenX(new_reserves_x)
         amount_out = self.reserves_x - new_reserves_x
 
-        exchange_price = new_reserves_y / new_reserves_x
-        slippage = exchange_price / reference_price
+        exchange_price =  self.K * (1/new_reserves_y**2)
+        slippage =   exchange_price / (1/reference_price)
+        print("Buy X Slippage {}".format(slippage))
 
         if slippage > (1 + epsilon):
             amount_out = 0
