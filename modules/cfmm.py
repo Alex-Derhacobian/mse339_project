@@ -60,8 +60,6 @@ class CoveredCallAMM(object):
     def getRiskyGivenRiskless(self, riskless):
         return 1 - norm.cdf(norm.ppf((riskless - self.invariant) / self.K) + self.sigma * np.sqrt(self.tau))
 
-
-
     def swapAmountInRisky(self, amount_in):
         """
         Swap in some amount of the risky asset and get some amount of the riskless asset in return.
@@ -199,19 +197,6 @@ class CoveredCallAMM(object):
             return 1 / (gamma * norm.pdf(
                 norm.ppf(float((R + gamma * amount_in - invariant) / K)) + sigma * np.sqrt(tau)) * quantilePrime(
                 (R + gamma * amount_in - invariant) / K) * (1 / K))
-
-    def getRisklessReservesGivenSpotPrice(self, s):
-        """
-        Given some spot price S in the no-fee case, get the risky reserves corresponding to that
-        spot price by solving the S = -y' = -f'(x) for x.
-        """
-
-        def func(x):
-            return s - blackScholesCoveredCallSpotPrice(x, self.K, self.sigma, self.tau)
-
-        sol = scipy.optimize.root(func, self.reserves_riskless)
-        reserves_riskless = sol.x[0]
-        return reserves_riskless
 
     def getRiskyReservesGivenSpotPrice(self, s):
         """
