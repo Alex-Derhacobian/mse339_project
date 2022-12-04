@@ -7,6 +7,7 @@ from configparser import ConfigParser
 
 import matplotlib.pyplot as plt 
 import numpy as np
+import copy
 
 from modules import cfmm
 from modules.arb import arbitrageExactly
@@ -86,15 +87,12 @@ max_marginal_price_array = []
 theoretical_lp_value_array = []
 # Effective value of LP shares with fees
 effective_lp_value_array = []
-# New liquidity definition values for risky asset
-risky_liquidity_value_array = []
-# New liquidity definition values for riskless asset
-riskless_liquidity_value_array = []
 
 
 dtau = TAU_UPDATE_FREQUENCY
 
 for i in range(len(S)):
+
 
     #Update pool's time to maturity
     theoretical_tau = initial_tau - t[i]
@@ -123,16 +121,7 @@ for i in range(len(S)):
         break
     max_index = i
 
-    if i < len(S) - 1:
-        reserves_risky_given_spotprice_a = Pool.getRiskyReservesGivenSpotPrice(S[i])
-        reserves_risky_given_spotprice_b = Pool.getRiskyReservesGivenSpotPrice(S[i+1])
-        risky_liquidity = (reserves_risky_given_spotprice_b - reserves_risky_given_spotprice_a) / (np.log(S[i+1]) - np.log(S[i]))
-        risky_liquidity_value_array.append(risky_liquidity)
 
-        reserves_riskless_given_spotprice_a = Pool.getRisklessReservesGivenSpotPrice(S[i])
-        reserves_riskless_given_spotprice_b = Pool.getRisklessReservesGivenSpotPrice(S[i+1])
-        riskless_liquidity = (reserves_riskless_given_spotprice_b - reserves_riskless_given_spotprice_a) / (np.log(S[i+1]) - np.log(S[i]))
-        riskless_liquidity_value_array.append(riskless_liquidity)
 
 
 # plt.plot(fees, mse, 'o')
