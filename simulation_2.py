@@ -24,6 +24,7 @@ config_object.read("config.ini")
 FEE = float(config_object.get("Pool parameters", "FEE"))
 EPSILON = float(config_object.get("Pool parameters", "EPSILON"))
 K = float(config_object.get("Pool parameters", "K"))
+BUDGET = float(config_object.get("Pool parameters", "BUDGET"))
 
 
 TRADE_SIZE_AVERAGE = float(config_object.get("Trade parameters", "TRADE_SIZE_AVERAGE"))
@@ -51,7 +52,7 @@ np.random.seed(SEED)
 
 
 #Initialize pool object
-Pool = cfmm.ConstantFunction(K, FEE)
+Pool = cfmm.ConstantFunction(BUDGET, K, FEE)
 
 
 
@@ -107,19 +108,19 @@ for i in range(len(S)):
 
     # Attempt to make the trade
     if trade == 'SELL X'
-        trade_success = Pool.swapXforY(size_trade_X, S[i], EPSILON)
+        trade_success = Pool.swapInAmountX(size_trade_X, S[i], EPSILON)
     elif trade == 'SELL Y':
         size_trade_X = 0
-        trade_success = Pool.swapYforX(size_trade_X, 1/S[i], EPSILON)
+        trade_success = Pool.swapInAmountY(size_trade_X, 1/S[i], EPSILON)
 
     trade_success.append(trade_success)
 
 
     # Add values to array
-    X_spot_price_array.append(Pool.getXofY())
-    Y_spot_price_array.append(Pool.getYofX())
-    X_reserves_array.append(Pool.getXreserves())
-    Y_reserves_array.append(Pool.getYreserves())
+    X_spot_price_array.append(Pool.getXGivenY())
+    Y_spot_price_array.append(Pool.getYGivenX())
+    X_reserves_array.append(Pool.reserves_X)
+    Y_reserves_array.append(Pool.reserves_Y)
 
 
     ##### TO CHECK - should we make this more an instantaneous derivative? 
