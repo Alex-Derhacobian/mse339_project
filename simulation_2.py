@@ -92,9 +92,25 @@ inefficiency_array = []
 
 
 
-##### TO CHECK: SHOULD WE KEEP REF PRICE CONSTANT?
+"""
 
-##### TO CHECK: HOW MUCH OF THIS NEEDS TO BE CHANGED WHEN NOT CONSTANT FUNCTION? OR WHEN WE ADD FEES?
+Different experiments to run
+    - constant vs moving ref price
+        - sensitivity around price tracking - MSE?
+    - convex program and allocation -> is it optimal vs some other function?
+        - change the brownian motion 
+    - diff trade size distributions -> how does it change the above
+        - gaussian
+        - uniform
+    - how to rebalence? -> e.g. when price undergoes step function change
+
+
+
+"""
+
+
+
+##### TO DO: Add fees?
 
 for i in range(len(S)):
 
@@ -138,14 +154,13 @@ for i in range(len(S)):
 # Show Data:
 
 
-######### TO DO - look at trade success evolution time
 print("Trade success: {}%".format(100*sum(trade_success_array)/len(S)))
 
 
 if PLOT_PRICE_EVOL: 
     plt.plot(t[0:max_index], S[0:max_index], label = "Reference price")
-    plt.plot(t[0:max_index], X_spot_price_array[0:max_index], label = "Spot Price")
-    plt.title("Reference price vs Spot Price of X")
+    plt.plot(t[0:max_index], Y_spot_price_array[0:max_index], label = "Spot Price")
+    plt.title("Reference price vs Spot Price of Y")
     plt.xlabel("Time steps (years)")
     plt.ylabel("Price (USD)")
     plt.legend(loc='best')
@@ -154,7 +169,7 @@ if PLOT_PRICE_EVOL:
     plt.plot()
     if SAVE_PRICE_EVOL:
         plt.savefig('sim_results/'+filename)
-    plt.show(block = False)
+    plt.show(block = True)
 
 
 
@@ -177,8 +192,6 @@ if PLOT_RESERVES:
 if PLOT_LIQUID: 
     plt.figure()
     t_mask = np.where(trade_success_array[1:max_index+1])
-    print(len(t_mask[0]))
-    print(len(liquidity_array))
     plt.plot(t[t_mask], liquidity_array, label = "Liquidity")
     plt.plot(t[t_mask], inefficiency_array, label = "Inefficiency")
     plt.title("liquidity and inefficiency")
@@ -192,4 +205,12 @@ if PLOT_LIQUID:
         plt.savefig('sim_results/'+filename)
     plt.show(block = True)
 
+
+plt.figure()
+plt.plot(t[0:max_index-18], np.convolve(trade_success_array, np.ones(20), 'valid')/10, label = "Trade Success")
+plt.title("20 time step rolling average of trade success")
+plt.xlabel("Time steps (years)")
+plt.ylabel("Ratio")
+plt.legend(loc='best')
+plt.show(block = True)
 
