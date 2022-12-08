@@ -64,10 +64,12 @@ class LogMarketSoringCFMM(object):
         assert nonnegative(amount_in)
         gamma = 1 - self.fee
         new_reserves_y = self.getYGivenX(self.reserves_x + gamma * amount_in)
+        new_reserves_x = self.getXGivenY(new_reserves_y)
         amount_out = self.reserves_y - new_reserves_y
 
-        exchange_price = self.reserves_y / self.reserves_x 
-        slippage = exchange_price / reference_price
+        exchange_price = 1 / ((self.K - 2)*np.exp(new_reserves_y) + 1)
+        slippage = exchange_price / reference_price 
+        print("Buy Y Slippage {}".format(slippage))
 
         if slippage > (1 + epsilon):
             amount_out = 0
@@ -76,11 +78,11 @@ class LogMarketSoringCFMM(object):
         else:
             self.reserves_x += amount_in
             self.reserves_y -= amount_out
+            assert(abs(self.reserves_x * self.reserves_y - self.K)< 0.001)
             assert nonnegative(new_reserves_y)
             # Update invariant
             effective_price_in_x = amount_out / amount_in
             return amount_out, effective_price_in_x
-
     def swapInAmountY(self, amount_in, reference_price, epsilon):
         """
         Swap in some amount of the riskless asset and get some amount of the risky asset in return.
@@ -94,10 +96,12 @@ class LogMarketSoringCFMM(object):
         assert nonnegative(amount_in)
         gamma = 1 - self.fee
         new_reserves_x = self.getXGivenY(self.reserves_y + gamma * amount_in)
+        new_reserves_y = self.getYGivenX(new_reserves_x)
         amount_out = self.reserves_x - new_reserves_x
 
-        exchange_price = self.reserves_y / self.reserves_x 
-        slippage = exchange_price / reference_price
+        exchange_price = 1 / ((self.K - 2)*np.exp(new_reserves_y) + 1)
+        slippage =   exchange_price / (1/reference_price)
+        print("Buy X Slippage {}".format(slippage))
 
         if slippage > (1 + epsilon):
             amount_out = 0
@@ -106,6 +110,7 @@ class LogMarketSoringCFMM(object):
         else:
             self.reserves_y += amount_in
             self.reserves_x -= amount_out
+            assert(abs(self.reserves_x * self.reserves_y -self.K) < 0.001)
             assert nonnegative(new_reserves_x)
             # Update invariant
             effective_price_in_y = None
@@ -114,7 +119,6 @@ class LogMarketSoringCFMM(object):
             else:
                 effective_price_in_y = amount_in / amount_out
             return amount_out, effective_price_in_y
-
     def getSpotPrice(self):
         """
         Get the current spot price (ie "reported price" using CFMM jargon) of
@@ -122,5 +126,5 @@ class LogMarketSoringCFMM(object):
         no-fee case.
         """
         # TODO ASK
-        return self.reserves_y / self.reserves_x
+        return 1 / ((self.K - 2)*np.exp(self.reserves_y) + 1)
 
